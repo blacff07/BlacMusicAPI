@@ -1,0 +1,20 @@
+# API Server
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+yt-dlp>=2024.1.1
+aiohttp>=3.9.0
+python-dotenv>=1.0.0
+py-yt-search>=0.0.14
+
+# uvloop speeds up the server on Linux/macOS. Skipped on Windows automatically.
+uvloop>=0.19.0; sys_platform != "win32"
+
+# Bot (blacmusicbot.py)
+# kurigram: a maintained Pyrogram fork that works correctly on Python 3.12–3.14.
+#   The original pyrogram==2.0.106 has a bug where session tasks attach to a
+#   temporary event loop before asyncio.run() creates the real one, causing:
+#   "Future attached to a different loop" on Python 3.10+.
+#   kurigram fixes this. It is a drop-in replacement — same import names.
+kurigram
+pytgcrypto
+py-tgcalls~=2.2.8
