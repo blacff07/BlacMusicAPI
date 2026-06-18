@@ -1,0 +1,15 @@
+.env
+downloads/
+logs/
+cookies/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
