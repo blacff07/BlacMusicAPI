@@ -1,0 +1,21 @@
+{
+  "name": "BlacMusicAPI",
+  "description": "Fast, cookieless YouTube streaming API for Telegram music/video bots.",
+  "repository": "https://github.com/blacff07/blacmusicapi",
+  "keywords": ["python", "fastapi", "youtube", "telegram", "music-api"],
+  "stack": "container",
+  "env": {
+    "API_KEYS": {
+      "description": "Comma-separated API keys. Leave blank for an open API.",
+      "required": false
+    },
+    "WORKERS": {
+      "description": "Uvicorn worker count. Keep at 1 (in-memory caches are per-process).",
+      "value": "1"
+    },
+    "ENABLE_DOCS": {
+      "description": "Expose /docs and /redoc.",
+      "value": "true"
+    }
+  }
+}
