@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BlacMusicAPI — self-hosted YouTube streaming for Telegram bots</title>
+<meta name="description" content="Fast, cookieless, self-hostable YouTube streaming API for Telegram music and video bots. Search, resolve, and proxy audio/video with a single request.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10120F;
+    --panel: #181B17;
+    --panel-2: #1D211C;
+    --line: #2A2E27;
+    --ink: #EDEAE2;
+    --ink-dim: #9C9A8F;
+    --ink-faint: #6C6A61;
+    --signal: #E8A33D;
+    --signal-dim: #A8792F;
+    --data: #3FBFA6;
+    --err: #E2574C;
+    --radius: 10px;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--signal); color:#10120F;}
+  :focus-visible{outline:2px solid var(--data); outline-offset:2px;}
+
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:50;
+    background:rgba(16,18,15,0.85); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; height:64px;}
+  .brand{display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:-0.01em;}
+  .brand .dot{width:8px; height:8px; border-radius:50%; background:var(--signal); box-shadow:0 0 10px var(--signal);}
+  .navlinks{display:flex; gap:28px; font-size:14px; color:var(--ink-dim);}
+  .navlinks a{text-decoration:none; transition:color .15s;}
+  .navlinks a:hover{color:var(--ink);}
+  .navlinks a.cta{
+    color:var(--bg); background:var(--signal); padding:8px 14px; border-radius:7px;
+    font-weight:600; font-family:var(--body);
+  }
+  @media (max-width:720px){ .navlinks a:not(.cta){display:none;} }
+
+  /* ---------- hero ---------- */
+  header.hero{padding:96px 0 64px; position:relative; overflow:hidden;}
+  .hero-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:48px; align-items:center;}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+  .eyebrow{
+    font-family:var(--mono); font-size:12.5px; color:var(--data);
+    letter-spacing:.06em; text-transform:uppercase; margin-bottom:18px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:''; width:16px; height:1px; background:var(--data);}
+  h1{
+    font-family:var(--display); font-weight:600; font-size:clamp(34px,5vw,54px);
+    line-height:1.05; letter-spacing:-0.02em; margin:0 0 22px;
+  }
+  h1 em{font-style:normal; color:var(--signal);}
+  .hero p.lede{color:var(--ink-dim); font-size:17px; max-width:46ch; margin:0 0 32px;}
+  .hero-ctas{display:flex; gap:12px; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--body); font-weight:600; font-size:14.5px;
+    padding:12px 20px; border-radius:8px; border:1px solid transparent;
+    text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    cursor:pointer; transition:transform .12s, border-color .12s, background .12s;
+  }
+  .btn-primary{background:var(--signal); color:#15130C;}
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-ghost{border-color:var(--line); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--ink-dim);}
+
+  .meter{
+    height:170px; border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--panel), var(--bg));
+    display:flex; align-items:flex-end; gap:3px; padding:16px; position:relative;
+  }
+  .meter::after{
+    content:'listening for a signal…'; position:absolute; top:12px; left:16px;
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+  }
+  .meter span{flex:1; background:var(--signal-dim); border-radius:2px 2px 0 0; opacity:.85;}
+  @media (prefers-reduced-motion: no-preference){
+    .meter span{animation:bar 2.4s ease-in-out infinite;}
+  }
+  @keyframes bar{ 0%,100%{transform:scaleY(var(--h,.3));} 50%{transform:scaleY(var(--h2,.7));} }
+
+  section{padding:72px 0; border-top:1px solid var(--line);}
+  .kicker{font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px;}
+  h2{font-family:var(--display); font-size:clamp(24px,3vw,32px); font-weight:600; letter-spacing:-0.01em; margin:0 0 8px;}
+  section > .wrap > p.sub{color:var(--ink-dim); max-width:56ch; margin:0 0 40px;}
+
+  /* ---------- console (signature element) ---------- */
+  .console{
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+    background:var(--panel);
+  }
+  .console-head{display:flex; align-items:stretch; border-bottom:1px solid var(--line); overflow-x:auto;}
+  .console-tab{
+    font-family:var(--mono); font-size:13px; color:var(--ink-dim);
+    background:transparent; border:none; border-right:1px solid var(--line);
+    padding:13px 18px; cursor:pointer; white-space:nowrap;
+  }
+  .console-tab[aria-selected="true"]{color:var(--signal); background:var(--panel-2);}
+  .console-body{padding:20px 22px 24px;}
+  .console-cmd{
+    font-family:var(--mono); font-size:13.5px; color:var(--ink-dim);
+    background:var(--bg); border:1px solid var(--line); border-radius:7px;
+    padding:12px 14px; overflow-x:auto; white-space:pre;
+  }
+  .console-cmd .flag{color:var(--data);}
+  .console-cmd .path{color:var(--ink);}
+  .console-meta{
+    display:flex; align-items:center; gap:14px; margin:14px 0 12px;
+    font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  }
+  .console-meta .ok{color:var(--data);}
+  .console-meta .ladder span{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--line); margin-left:3px;
+  }
+  .console-meta .ladder span.hit{background:var(--data);}
+  .console-out{
+    font-family:var(--mono); font-size:12.5px; color:var(--ink-dim);
+    background:var(--bg); border:1px solid var(--line); border-radius:7px;
+    padding:14px; max-height:220px; overflow:auto; white-space:pre-wrap; word-break:break-word;
+  }
+  .console-out .k{color:var(--data);}
+  .console-out .v{color:var(--ink);}
+
+  /* ---------- pipeline ---------- */
+  .steps{list-style:none; margin:0; padding:0; display:grid; gap:0;}
+  .step{display:grid; grid-template-columns:44px 1fr; gap:18px; padding:22px 0; border-top:1px solid var(--line);}
+  .step:first-child{border-top:none;}
+  .step .n{font-family:var(--mono); color:var(--signal); font-size:14px; padding-top:2px;}
+  .step h3{font-family:var(--body); font-weight:600; font-size:15.5px; margin:0 0 4px;}
+  .step p{margin:0; color:var(--ink-dim); font-size:14.5px; max-width:60ch;}
+
+  /* ---------- endpoints ---------- */
+  .ep-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .ep-table tr{border-top:1px solid var(--line);}
+  .ep-table tr:hover{background:var(--panel);}
+  .ep-table td{padding:13px 10px;}
+  .ep-table td:first-child{padding-left:0;}
+  .method{
+    font-family:var(--mono); font-size:11px; color:var(--data);
+    border:1px solid var(--line); border-radius:5px; padding:2px 7px;
+  }
+  .ep-table code{font-family:var(--mono); font-size:13px; color:var(--ink);}
+  .ep-table .desc{color:var(--ink-dim);}
+
+  /* ---------- auth ---------- */
+  .auth-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:720px){ .auth-grid{grid-template-columns:1fr;} }
+  .card{border:1px solid var(--line); border-radius:var(--radius); padding:22px; background:var(--panel);}
+  .card h3{font-family:var(--body); font-size:15px; font-weight:600; margin:0 0 8px;}
+  .card p{color:var(--ink-dim); font-size:14px; margin:0 0 14px;}
+  .card .console-cmd{font-size:12.5px;}
+
+  footer{border-top:1px solid var(--line); padding:36px 0;}
+  footer .wrap{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;}
+  footer .fbrand{font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);}
+  footer .flinks{display:flex; gap:18px; font-size:13px; color:var(--ink-dim);}
+  footer a{text-decoration:none;}
+  footer a:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>BlacMusicAPI</div>
+    <div class="navlinks">
+      <a href="#console">Console</a>
+      <a href="#pipeline">How it resolves</a>
+      <a href="#endpoints">Endpoints</a>
+      <a href="#auth">Auth</a>
+      <a href="/docs" class="cta">Open API docs</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">cookieless by default</div>
+      <h1>Point your bot at YouTube.<br>Get back <em>a stream</em>, not a headache.</h1>
+      <p class="lede">Search, resolve, and proxy YouTube audio and video with one request each. No cookies required, no files to download and manage — built for Telegram music and video bots that need to move fast.</p>
+      <div class="hero-ctas">
+        <a href="#console" class="btn btn-primary">Try a live request →</a>
+        <a href="/docs" class="btn btn-ghost">Full API reference</a>
+      </div>
+    </div>
+    <div class="meter" aria-hidden="true" id="meter"></div>
+  </div>
+</header>
+
+<section id="console">
+  <div class="wrap">
+    <div class="kicker">Signal</div>
+    <h2>Resolve console</h2>
+    <p class="sub">The exact request and response shape for each route. Every dot below is one rung of the resolution ladder this request actually climbed to get a playable format.</p>
+
+    <div class="console">
+      <div class="console-head" role="tablist" aria-label="Endpoint examples">
+        <button class="console-tab" role="tab" aria-selected="true" data-tab="search">search</button>
+        <button class="console-tab" role="tab" aria-selected="false" data-tab="info">info</button>
+        <button class="console-tab" role="tab" aria-selected="false" data-tab="stream">stream</button>
+        <button class="console-tab" role="tab" aria-selected="false" data-tab="related">related</button>
+        <button class="console-tab" role="tab" aria-selected="false" data-tab="playlist">playlist</button>
+      </div>
+      <div class="console-body">
+        <div class="console-cmd" id="cmd">curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/search?q=never+gonna+give+you+up&limit=1</span>"</div>
+        <div class="console-meta">
+          <span class="ok">● 200 OK</span>
+          <span id="meta-time">resolved in 118ms</span>
+          <span class="ladder" id="ladder" title="client tiers attempted: spoofed → age-bypass → geo-bypass → cookie">
+            <span class="hit"></span><span></span><span></span><span></span>
+          </span>
+        </div>
+        <div class="console-out" id="out"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="wrap">
+    <div class="kicker">Under the hood</div>
+    <h2>What happens between your request and a playable URL</h2>
+    <p class="sub">Every resolve climbs the same ladder, stopping at the first rung that works — most requests never leave rung one.</p>
+    <ol class="steps">
+      <li class="step"><span class="n">01</span><div><h3>Spoofed client, no auth</h3><p>Requests YouTube as a standard web/Android client. Resolves the large majority of videos with no session state at all.</p></div></li>
+      <li class="step"><span class="n">02</span><div><h3>Age-restricted fallback</h3><p>If the video needs an age gate cleared, retries with a client tier that can pass it without a signed-in account.</p></div></li>
+      <li class="step"><span class="n">03</span><div><h3>Geo-bypass retry</h3><p>If the block is regional, retries the extraction spoofed as originating from each configured bypass country.</p></div></li>
+      <li class="step"><span class="n">04</span><div><h3>Cookie fallback (opt-in)</h3><p>Only if you've set <code style="font-family:var(--mono); color:var(--ink);">YT_COOKIES</code> on your deployment — a last resort for the small remainder that need a real session.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="endpoints">
+  <div class="wrap">
+    <div class="kicker">Reference</div>
+    <h2>Endpoints</h2>
+    <p class="sub">Every route below returns JSON except the <code style="font-family:var(--mono); color:var(--ink);">/play/*</code> routes, which stream bytes directly — point ffmpeg or your player at them.</p>
+    <table class="ep-table">
+      <tbody>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/search</code></td><td class="desc">Search by query, get back ranked results</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/info</code></td><td class="desc">Full metadata for one video id</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/related</code></td><td class="desc">More-like-this recommendations for a video id</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/playlist</code></td><td class="desc">Flat list of a playlist's videos</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/stream</code></td><td class="desc">Resolved direct media URL as JSON, for players that fetch it themselves</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/audio</code></td><td class="desc">Raw audio format list for a video id</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/play/audio</code></td><td class="desc">Proxies audio bytes directly — point ffmpeg/pytgcalls at this URL</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/play/video</code></td><td class="desc">Proxies video bytes at a given height</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/api/youtube/play/video/hq</code></td><td class="desc">Proxies the highest-quality video stream available</td></tr>
+        <tr><td><span class="method">GET</span></td><td><code>/health</code></td><td class="desc">Liveness check for uptime monitors</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="auth">
+  <div class="wrap">
+    <div class="kicker">Access</div>
+    <h2>Open by default, keyed when you want it</h2>
+    <p class="sub">Leave <code style="font-family:var(--mono); color:var(--ink);">API_KEYS</code> empty for a private deployment only your own bot talks to. Set it to require a key on every request.</p>
+    <div class="auth-grid">
+      <div class="card">
+        <h3>Open mode</h3>
+        <p>No <code style="font-family:var(--mono);">API_KEYS</code> set — every route above works with no key at all.</p>
+        <div class="console-cmd">curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/search?q=lofi</span>"</div>
+      </div>
+      <div class="card">
+        <h3>Key mode</h3>
+        <p>Send it as a header for normal HTTP clients, or as a query param for tools like ffmpeg that can't attach headers.</p>
+        <div class="console-cmd">curl <span class="flag">-H</span> "X-API-Key: &lt;key&gt;" "<span class="path">.../api/youtube/search?q=lofi</span>"
+<span class="flag">— or —</span>
+"<span class="path">.../api/youtube/search?q=lofi&amp;api_key=&lt;key&gt;</span>"</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fbrand">BlacMusicAPI · self-hosted, cookieless YouTube streaming for Telegram bots</div>
+    <div class="flinks">
+      <a href="/docs">API docs</a>
+      <a href="/health">Status</a>
+      <a href="https://t.me/blcqt">@blcqt</a>
+      <a href="https://t.me/TechTipsCode">Channel</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ambient idle meter — decorative, respects reduced motion via CSS
+  var meter = document.getElementById('meter');
+  var bars = 28;
+  for (var i=0;i<bars;i++){
+    var s = document.createElement('span');
+    var h1 = (0.15 + Math.random()*0.35).toFixed(2);
+    var h2 = (0.4 + Math.random()*0.5).toFixed(2);
+    s.style.setProperty('--h', h1);
+    s.style.setProperty('--h2', h2);
+    s.style.animationDelay = (Math.random()*2.4).toFixed(2)+'s';
+    s.style.height = '100%';
+    meter.appendChild(s);
+  }
+
+  // console tabs — real example payloads, matching this API's actual response shape
+  var examples = {
+    search: {
+      cmd: 'curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/search?q=never+gonna+give+you+up&limit=1</span>"',
+      time: 'resolved in 118ms', ladder: 1,
+      out: '{\n  <span class="k">"success"</span>: <span class="v">true</span>,\n  <span class="k">"results"</span>: [{\n    <span class="k">"id"</span>: <span class="v">"dQw4w9WgXcQ"</span>,\n    <span class="k">"title"</span>: <span class="v">"Rick Astley - Never Gonna Give You Up"</span>,\n    <span class="k">"duration_sec"</span>: <span class="v">213</span>,\n    <span class="k">"channel"</span>: <span class="v">"Rick Astley"</span>,\n    <span class="k">"contract"</span>: { <span class="k">"stream_proxy_url"</span>: <span class="v">"/api/youtube/play/audio?id=dQw4w9WgXcQ"</span> }\n  }]\n}'
+    },
+    info: {
+      cmd: 'curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/info?id=dQw4w9WgXcQ</span>"',
+      time: 'resolved in 96ms', ladder: 1,
+      out: '{\n  <span class="k">"success"</span>: <span class="v">true</span>,\n  <span class="k">"info"</span>: {\n    <span class="k">"id"</span>: <span class="v">"dQw4w9WgXcQ"</span>,\n    <span class="k">"title"</span>: <span class="v">"Rick Astley - Never Gonna Give You Up (Official Video)"</span>,\n    <span class="k">"duration_sec"</span>: <span class="v">213</span>,\n    <span class="k">"views"</span>: <span class="v">"1794215082"</span>\n  }\n}'
+    },
+    stream: {
+      cmd: 'curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/stream?id=dQw4w9WgXcQ</span>"',
+      time: 'resolved in 340ms', ladder: 1,
+      out: '{\n  <span class="k">"success"</span>: <span class="v">true</span>,\n  <span class="k">"stream"</span>: {\n    <span class="k">"id"</span>: <span class="v">"dQw4w9WgXcQ"</span>,\n    <span class="k">"format_id"</span>: <span class="v">"18"</span>,\n    <span class="k">"ext"</span>: <span class="v">"mp4"</span>,\n    <span class="k">"url"</span>: <span class="v">"https://rr2---sn-....googlevideo.com/videoplayback?..."</span>\n  }\n}'
+    },
+    related: {
+      cmd: 'curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/related?id=dQw4w9WgXcQ&limit=3</span>"',
+      time: 'resolved in 410ms', ladder: 1,
+      out: '{\n  <span class="k">"success"</span>: <span class="v">true</span>,\n  <span class="k">"results"</span>: [\n    { <span class="k">"title"</span>: <span class="v">"Never Gonna Give You Up [Remastered 4K]"</span> },\n    { <span class="k">"title"</span>: <span class="v">"Never Gonna Give You Up (Extended)"</span> },\n    { <span class="k">"title"</span>: <span class="v">"Together Forever (Official Video)"</span> }\n  ]\n}'
+    },
+    playlist: {
+      cmd: 'curl <span class="flag">-s</span> "<span class="path">https://your-host/api/youtube/playlist?url=&lt;encoded-playlist-url&gt;&limit=20</span>"',
+      time: 'resolved in 512ms', ladder: 2,
+      out: '{\n  <span class="k">"success"</span>: <span class="v">true</span>,\n  <span class="k">"results"</span>: [\n    { <span class="k">"id"</span>: <span class="v">"..."</span>, <span class="k">"title"</span>: <span class="v">"..."</span> },\n    <span style="opacity:.6">// ...remaining entries, capped at limit</span>\n  ]\n}'
+    }
+  };
+
+  var cmdEl = document.getElementById('cmd');
+  var outEl = document.getElementById('out');
+  var timeEl = document.getElementById('meta-time');
+  var ladderEl = document.getElementById('ladder');
+  var tabs = document.querySelectorAll('.console-tab');
+
+  function render(key){
+    var ex = examples[key];
+    cmdEl.innerHTML = ex.cmd;
+    outEl.textContent = '';
+    timeEl.textContent = ex.time;
+    var dots = ladderEl.querySelectorAll('span');
+    dots.forEach(function(d, i){ d.classList.toggle('hit', i < ex.ladder); });
+
+    var full = ex.out;
+    var plain = full.replace(/<[^>]+>/g,'');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      outEl.innerHTML = full;
+      return;
+    }
+    // lightweight character reveal using the plain text, then swap to
+    // the styled HTML once done — keeps the animation cheap and correct.
+    var i = 0;
+    outEl.textContent = '';
+    var iv = setInterval(function(){
+      i += 3;
+      outEl.textContent = plain.slice(0, i);
+      if (i >= plain.length){
+        clearInterval(iv);
+        outEl.innerHTML = full;
+      }
+    }, 8);
+  }
+
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){ t.setAttribute('aria-selected','false'); });
+      tab.setAttribute('aria-selected','true');
+      render(tab.dataset.tab);
+    });
+  });
+
+  render('search');
+})();
+</script>
+</body>
+</html>
